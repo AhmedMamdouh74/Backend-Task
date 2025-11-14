@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Models;
 using System.Collections.Concurrent;
-namespace Infrastructure.Services;
+namespace Infrastructure.Service;
 
 public class TemporalBlockCleanupService : BackgroundService
 {

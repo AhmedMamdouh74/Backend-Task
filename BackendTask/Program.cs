@@ -1,6 +1,7 @@
 
 using Application.Services;
 using Infrastructure.DI;
+using Application.DI;
 using Microsoft.AspNetCore.Builder;
 
 namespace BackendTask
@@ -8,13 +9,19 @@ namespace BackendTask
     public class Program
     {
         public static void Main(string[] args)
+
         {
             var builder = WebApplication.CreateBuilder(args);
+           // builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+           
+
 
             builder.Services.AddInfrastructure();
 
 
-            builder.Services.AddScoped<ICountryBlockService, CountryBlockService>();
+            builder.Services.AddApplication();
+
 
 
             builder.Services.AddControllers();
@@ -35,6 +42,7 @@ namespace BackendTask
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
+            app.UseForwardedHeaders();
 
 
             app.MapControllers();

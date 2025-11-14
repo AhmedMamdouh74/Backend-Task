@@ -32,6 +32,7 @@ namespace Application.Services
             {
                 CountryCode = countryCode,
                 CountryName = "",
+                Blocked=true,
                 BlockedUntilUtc = null // Set to null for permanent blockDto
             };
             var created = await repo.AddBlockAsync(countryBlock);
