@@ -1,4 +1,6 @@
-﻿using Domain.Repos;
+﻿using Application.Services;
+using Domain.Repos;
+using Domian.ReposContract;
 using Infrastructure.Repos;
 using Infrastructure.Service;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +15,10 @@ public static class DependencyInjection
         services.AddSingleton(new ConcurrentDictionary<string, CountryBlock>());
         services.AddSingleton<ICountryRepo, CountryRepo>();
         services.AddHostedService<TemporalBlockCleanupService>();
+
+        services.AddHttpClient<IGeoLocationService, GeoLocationService>();
+        services.AddSingleton<IBlockedAttemptLogRepo, BlockedAttemptLogRepo>();
+
         // register other infra services here
         return services;
     }
