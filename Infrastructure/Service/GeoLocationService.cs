@@ -24,12 +24,9 @@ namespace Infrastructure.Service
         }
         public async Task<(string CountryCode, string CountryName, string ISP)> GetCountryByIpAsync(string ipAddress)
         {
-            if (!IPAddress.TryParse(ipAddress, out var newIp))
-            {
-                throw new ArgumentException($"Invalid IP address: {ipAddress}");
-            }
+           
 
-            var url = $"https://api.ipgeolocation.io/ipgeo?apiKey={apiKey}&ip={newIp}";
+            var url = $"https://api.ipgeolocation.io/ipgeo?apiKey={apiKey}&ip={ipAddress}";
             var response = await httpClient.GetAsync(url);
             if (!response.IsSuccessStatusCode)
             {

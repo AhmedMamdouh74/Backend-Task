@@ -46,7 +46,7 @@ namespace Application.Services
 
                 await logRepo.AddLogAsync(new BlockLog
                 {
-                    CountryCode = country.CountryCode,
+                    CountryCode = result.CountryCode,
                     Blocked = country.Blocked,
                     Ip = ipAddress,
                     UserAgent = userAgent
