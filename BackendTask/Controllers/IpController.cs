@@ -1,6 +1,6 @@
-﻿using Application.Services;
+﻿using Api.Models;
+using Application.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using System.Net;
 
 namespace Api.Controllers
@@ -16,55 +16,79 @@ namespace Api.Controllers
             this.ipService = ipService;
         }
 
+        
         [HttpGet("lookup")]
         public async Task<IActionResult> Lookup([FromQuery] string? ipAddress)
         {
-            
-            ipAddress ??= HttpContext.Connection.RemoteIpAddress?.ToString();
-
-            
-            if (!IPAddress.TryParse(ipAddress, out _))
+            try
             {
-               
-                return BadRequest("Invalid IP address format.");
+                // 1. Use caller IP if none provided
+                ipAddress ??= HttpContext.Connection.RemoteIpAddress?.ToString();
+
+                if (string.IsNullOrWhiteSpace(ipAddress))
+                    return BadRequest(ApiResponse.Fail("Could not identify client IP address."));
+
+                // 2. Validate IP format
+                if (!IPAddress.TryParse(ipAddress, out _))
+                    return BadRequest(ApiResponse.Fail("Invalid IP address format."));
+
+                // 3. Call the Application Layer
+                var result = await ipService.LookupAsync(ipAddress);
+
+                return Ok(ApiResponse.Ok("IP lookup successful.", result));
             }
-           
-            var result = await ipService.LookupAsync(ipAddress);
-            return Ok(result);
+            catch (Exception ex)
+            {
+                return StatusCode(502, ApiResponse.Fail("Geo lookup failed.", ex.Message));
+            }
         }
 
+     
         [HttpGet("check-block")]
         public async Task<IActionResult> CheckBlock()
         {
-   
-            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-           
-
-           
-            if (string.IsNullOrWhiteSpace(ip) || ip == "::1" || ip == "127.0.0.1")
+            try
             {
-                ip = "8.8.8.8"; // Use a known public IP for testing
+                // 1. Fetch caller external IP from HttpContext
+                var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+                // Handle localhost development scenario
+                if (string.IsNullOrWhiteSpace(ip) || ip == "::1" || ip == "127.0.0.1")
+                    ip = "8.8.8.8"; // fallback for testing
+
+                // 2. Validate the IP
+                if (!IPAddress.TryParse(ip, out _))
+                    return BadRequest(ApiResponse.Fail("Unable to resolve client IP."));
+
+                // 3. Get User-Agent
+                var userAgent = Request.Headers["User-Agent"].ToString();
+
+                // 4. Perform block check
+                var result = await ipService.CheckBlockAsync(ip, userAgent);
+
+                return Ok(ApiResponse.Ok("IP block check completed.", result));
             }
-
-
-            if (!IPAddress.TryParse(ip, out _))
+            catch (Exception ex)
             {
-               
-                return BadRequest("Unable to resolve client IP.");
+                return StatusCode(500, ApiResponse.Fail("Internal server error.", ex.Message));
             }
-
-
-
-            var userAgent = Request.Headers["User-Agent"].ToString();
-            var result = await ipService.CheckBlockAsync(ip, userAgent);
-            return Ok(result);
         }
 
+       
         [HttpGet("/api/logs/blocked-attempts")]
-        public async Task<IActionResult> GetLogs([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetLogs(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
-            var result = await ipService.GetLogsAsync(page, pageSize);
-            return Ok(result);
+            try
+            {
+                var result = await ipService.GetLogsAsync(page, pageSize);
+                return Ok(ApiResponse.Ok("Blocked attempts retrieved successfully.", result));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse.Fail("Failed to fetch logs.", ex.Message));
+            }
         }
     }
 }

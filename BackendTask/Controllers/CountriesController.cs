@@ -1,4 +1,5 @@
-﻿using Application.DTOs;
+﻿using Api.Models;
+using Application.DTOs;
 using Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,50 +11,72 @@ namespace Test_Assignment.Controllers
     public class CountriesController : ControllerBase
     {
         private readonly ICountryBlockService countryBlockService;
+
         public CountriesController(ICountryBlockService _countryBlockService)
         {
             countryBlockService = _countryBlockService;
         }
+
+      
         [HttpPost("block")]
         public async Task<IActionResult> BlockCountry([FromBody] AddBlockedCountryDto blockDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequest(ApiResponse.Fail("Invalid request data.", ModelState));
             }
+
             var result = await countryBlockService.AddBlockAsync(blockDto);
+
             if (!result)
             {
-                return Conflict("Country is already blocked or invalid country code.");
+                return Conflict(ApiResponse.Fail("Country is already blocked or invalid country code."));
             }
-            return Ok("Country blocked successfully.");
+
+            return Ok(ApiResponse.Ok("Country blocked successfully."));
         }
+
+       
         [HttpDelete("block/{CountryCode}")]
         public async Task<IActionResult> RemoveBlockCountry([FromRoute] RemoveBlockedCountryDto removedCountryDto)
         {
             var ok = await countryBlockService.RemoveBlockAsync(removedCountryDto);
-            if (!ok) return NotFound();
-            return NoContent();
+
+            if (!ok)
+                return NotFound(ApiResponse.Fail("Country block not found."));
+
+            return Ok(ApiResponse.Ok("Country unblocked successfully."));
         }
+
+       
         [HttpGet("blocked")]
-        public async Task<IActionResult> GetBlockedCountries([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null)
+        public async Task<IActionResult> GetBlockedCountries(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? search = null)
         {
             var result = await countryBlockService.GetAllAsync(page, pageSize, search);
-            return Ok(result);
+
+            return Ok(ApiResponse.Ok("Blocked countries fetched successfully.", result));
         }
+
+      
         [HttpPost("temporal-block")]
         public async Task<IActionResult> AddTemporalBlock([FromBody] TemporalBlockDto temporalBlockDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequest(ApiResponse.Fail("Invalid request data.", ModelState));
             }
+
             var result = await countryBlockService.AddTemporalBlockAsync(temporalBlockDto);
+
             if (!result)
             {
-                return Conflict("Country is already blocked or invalid country code.");
+                return Conflict(ApiResponse.Fail("Country is already blocked or invalid country code."));
             }
-            return Ok("Country temporally blocked successfully.");
+
+            return Ok(ApiResponse.Ok("Country temporarily blocked successfully."));
         }
     }
 }
