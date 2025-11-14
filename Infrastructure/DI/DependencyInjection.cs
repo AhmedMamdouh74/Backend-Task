@@ -1,6 +1,6 @@
 ﻿using Domain.Repos;
 using Infrastructure.Repos;
-using Infrastructure.Services;
+using Infrastructure.Service;
 using Microsoft.Extensions.DependencyInjection;
 using Models;
 using System.Collections.Concurrent;
