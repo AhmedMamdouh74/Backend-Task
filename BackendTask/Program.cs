@@ -1,8 +1,5 @@
-
-using Application.Services;
-using Infrastructure.DI;
 using Application.DI;
-using Microsoft.AspNetCore.Builder;
+using Infrastructure.DI;
 
 namespace BackendTask
 {
@@ -12,9 +9,9 @@ namespace BackendTask
 
         {
             var builder = WebApplication.CreateBuilder(args);
-           // builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
-           
+
+
 
 
             builder.Services.AddInfrastructure();
@@ -22,15 +19,21 @@ namespace BackendTask
 
             builder.Services.AddApplication();
 
+           
+
+
+
+
 
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-           
+
             builder.Services.AddSwaggerGen();
 
 
             var app = builder.Build();
+           
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -42,8 +45,10 @@ namespace BackendTask
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
-            app.UseForwardedHeaders();
+         //   app.UseMiddleware<AdminSafeListMiddleware>(builder.Configuration["AdminSafeList"]);
 
+
+            
 
             app.MapControllers();
 
