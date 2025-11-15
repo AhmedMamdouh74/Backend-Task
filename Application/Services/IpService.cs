@@ -33,6 +33,18 @@ namespace Application.Services
             logger.LogDebug("Geo lookup result: CountryCode={CountryCode}, CountryName={CountryName}", result.CountryCode, result.CountryName);
 
             var country = await countryRepo.GetBlockAsync(result.CountryCode);
+            bool isBlocked = country != null && country.Blocked;
+            var logs = await logRepo.GetAllAsync();
+            var alreadyLogged = logs.Any(country => country.Ip == ipAddress);
+            // to avoid dublicates
+            if(!alreadyLogged)
+            await logRepo.AddLogAsync(new BlockLog
+            {
+                CountryCode = result.CountryCode,
+                Blocked = isBlocked,
+                Ip = ipAddress,
+                UserAgent = userAgent
+            });
 
             if (country == null)
             {
@@ -40,23 +52,13 @@ namespace Application.Services
                 return new IpCheckResponseDto(ipAddress, result.CountryCode, false);
             }
 
-            if (country.BlockedUntilUtc == null || country.BlockedUntilUtc > DateTime.UtcNow)
-            {
-                logger.LogWarning("IP {IpAddress} from country {CountryCode} is blocked. Logging attempt...", ipAddress, country.CountryCode);
 
-                await logRepo.AddLogAsync(new BlockLog
-                {
-                    CountryCode = country.CountryCode,
-                    Blocked = country.Blocked,
-                    Ip = ipAddress,
-                    UserAgent = userAgent
-                });
 
-                return new IpCheckResponseDto(ipAddress, country.CountryCode, true);
-            }
+
+
 
             logger.LogInformation("Country {CountryCode} block expired. Returning temporal block status.", country.CountryCode);
-            return new IpCheckResponseDto(ipAddress, country.CountryCode, country.IsTemporal);
+            return new IpCheckResponseDto(ipAddress, country.CountryCode, country.Blocked);
         }
 
         public async Task<PagedResult<BlockLog>> GetLogsAsync(int page, int pageSize)

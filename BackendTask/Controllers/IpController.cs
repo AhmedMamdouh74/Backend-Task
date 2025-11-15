@@ -10,60 +10,82 @@ namespace Api.Controllers
     public class IpController : ControllerBase
     {
         private readonly IIpService ipService;
+        private readonly IGeoLocationService geoLocationService;
+        private readonly IConfiguration config;
 
-        public IpController(IIpService ipService)
+        public IpController(IIpService _ipService,IGeoLocationService _geoLocationService,IConfiguration _config)
         {
-            this.ipService = ipService;
+            ipService = _ipService;
+            geoLocationService = _geoLocationService;
+            config= _config;
         }
 
-        
+       
         [HttpGet("lookup")]
         public async Task<IActionResult> Lookup([FromQuery] string? ipAddress)
         {
             try
             {
-                // 1. Use caller IP if none provided
-                ipAddress ??= HttpContext.Connection.RemoteIpAddress?.ToString();
-
+                // 1. If no IP is provided, use caller IP from HttpContext
                 if (string.IsNullOrWhiteSpace(ipAddress))
-                    return BadRequest(ApiResponse.Fail("Could not identify client IP address."));
+                {
+                    ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+                    if (ipAddress == "::1")
+                    {
+                        ipAddress = config["DevFallbackIp"]; // fallback for local dev only
+                    }
+                }
 
                 // 2. Validate IP format
                 if (!IPAddress.TryParse(ipAddress, out _))
-                    return BadRequest(ApiResponse.Fail("Invalid IP address format."));
+                {
+                    return BadRequest(ApiResponse.Fail($"Invalid IP address: {ipAddress}"));
+                }
+              
 
-                // 3. Call the Application Layer
-                var result = await ipService.LookupAsync(ipAddress);
 
-                return Ok(ApiResponse.Ok("IP lookup successful.", result));
+
+                var result = await geoLocationService.GetCountryByIpAsync(ipAddress);
+
+                return Ok(ApiResponse.Ok("IP lookup completed.", new
+                {
+                    ipAddress,
+                    result.CountryCode,
+                    result.CountryName,
+                    result.ISP
+                }));
             }
             catch (Exception ex)
             {
-                return StatusCode(502, ApiResponse.Fail("Geo lookup failed.", ex.Message));
+                return StatusCode(500, ApiResponse.Fail("Internal server error.", ex.Message));
             }
         }
 
-     
+
         [HttpGet("check-block")]
+
         public async Task<IActionResult> CheckBlock()
         {
             try
             {
                 // 1. Fetch caller external IP from HttpContext
                 var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+                // to avoid ::1 in development environment
+                if (ip == "::1")
+                {
+                    ip = config["DevFallbackIp"]; 
+                }
 
-                // Handle localhost development scenario
-                if (string.IsNullOrWhiteSpace(ip) || ip == "::1" || ip == "127.0.0.1")
-                    ip = "8.8.8.8"; // fallback for testing
 
-                // 2. Validate the IP
+
+              
                 if (!IPAddress.TryParse(ip, out _))
                     return BadRequest(ApiResponse.Fail("Unable to resolve client IP."));
 
-                // 3. Get User-Agent
+               
                 var userAgent = Request.Headers["User-Agent"].ToString();
 
-                // 4. Perform block check
+                
                 var result = await ipService.CheckBlockAsync(ip, userAgent);
 
                 return Ok(ApiResponse.Ok("IP block check completed.", result));
@@ -74,7 +96,7 @@ namespace Api.Controllers
             }
         }
 
-       
+
         [HttpGet("/api/logs/blocked-attempts")]
         public async Task<IActionResult> GetLogs(
             [FromQuery] int page = 1,

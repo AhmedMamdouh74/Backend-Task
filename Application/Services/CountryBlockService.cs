@@ -17,11 +17,8 @@ namespace Application.Services
         public async Task<bool> AddBlockAsync(AddBlockedCountryDto blockDto)
         {
             var countryCode = blockDto.CountryCode?.Trim().ToUpperInvariant() ?? "";
-            if (!IsValidCountryCode(countryCode))
-            {
-                logger.LogWarning("Invalid country code provided: {CountryCode}", blockDto.CountryCode);
-                return false;
-            }
+           
+            CheckCountryCodeWithLogging(countryCode);
             var existing = await repo.GetBlockAsync(countryCode);
             if (existing != null)
             {
@@ -52,17 +49,8 @@ namespace Application.Services
         {
             var countryCode = blockDto.CountryCode?.Trim().ToUpperInvariant() ?? "";
 
-            if (!IsValidCountryCode(countryCode))
-            {
-                logger.LogWarning("Invalid country code provided: {CountryCode}", blockDto.CountryCode);
-                return false;
-            }
-            var existing = await repo.GetBlockAsync(countryCode);
-            if (existing != null)
-            {
-                logger.LogInformation("Country code {CountryCode} is already blocked.", countryCode);
-                return false;
-            }
+            CheckCountryCodeWithLogging(countryCode);
+           await IsBlockedCountryWithLogging(countryCode);
             var countryBlock = new Models.CountryBlock
             {
                 CountryCode = countryCode,
@@ -129,12 +117,7 @@ namespace Application.Services
                 logger.LogWarning("Invalid country code provided: {CountryCode}", countryCode);
                 return false;
             }
-            var existing = await repo.GetBlockAsync(countryCode);
-            if (existing == null)
-            {
-                logger.LogInformation("Country code {CountryCode} is not blocked.", countryCode);
-                return false;
-            }
+            await IsBlockedCountryWithLogging(countryCode);
             var removed = await repo.RemoveBlockedAsync(countryCode);
             if (!removed)
             {
@@ -157,6 +140,25 @@ namespace Application.Services
             {
                 return false;
             }
+        }
+        private bool CheckCountryCodeWithLogging(string countryCode)
+        {
+            if (!IsValidCountryCode(countryCode))
+            {
+                logger.LogWarning("Invalid country code provided: {CountryCode}", countryCode);
+                return false;
+            }
+            return true;
+        }
+        private async Task<bool> IsBlockedCountryWithLogging(string countryCode)
+        {
+            var existing = await repo.GetBlockAsync(countryCode);
+            if (existing != null)
+            {
+                logger.LogInformation("Country code {CountryCode} is already blocked.", countryCode);
+                return false;
+            }
+            return true;
         }
 
     }
